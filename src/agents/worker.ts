@@ -1,5 +1,8 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk/sdk";
+import type {
+	HookCallback,
+	SDKUserMessage,
+} from "@anthropic-ai/claude-agent-sdk/sdk";
 import { UPLOADS_DIR } from "../constants.ts";
 import { CronManager } from "./cron-manager.ts";
 import type { FileAttachment, WorkerOutMessage } from "./orchestrator.ts";
@@ -164,6 +167,30 @@ self.onmessage = async (event: MessageEvent) => {
 		// Build prompt: string for plain text, async generator for attachments
 		const prompt = await buildPrompt(message);
 
+		const onStop: HookCallback = async (input) => {
+			try {
+				const transcript = await Bun.file(input.transcript_path).text();
+				let summary = "";
+
+				for await (const m of query({
+					prompt: `Summarize this conversation in 2-3 sentences:\n\n${transcript}`,
+					options: {
+						model: "claude-sonnet-4-5-20250929",
+						permissionMode: "bypassPermissions",
+					},
+				})) {
+					if (m.type === "result" && m.subtype === "success") {
+						summary = m.result;
+					}
+				}
+
+				console.log(`[${config.agentName}] Summary: ${summary}`);
+			} catch (err) {
+				console.error(`[${config.agentName}] Summary failed:`, err);
+			}
+			return {};
+		};
+
 		for await (const m of query({
 			prompt,
 			options: {
@@ -175,6 +202,9 @@ self.onmessage = async (event: MessageEvent) => {
 				cwd: config.workspace,
 				settingSources: ["project"],
 				mcpServers,
+				// hooks: {
+				// 	Stop: [{ hooks: [onStop] }],
+				// },
 			},
 		})) {
 			if (m.type === "system" && m.subtype === "init") {

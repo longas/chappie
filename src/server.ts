@@ -1,9 +1,14 @@
-import { mkdirSync } from "node:fs";
-import { extname } from "node:path";
+import { mkdirSync, readFileSync } from "node:fs";
+import { extname, resolve } from "node:path";
 import type { AgentMail } from "agentmail";
 import { Webhook } from "svix";
 import type { FileAttachment } from "./agents/orchestrator.ts";
 import { AgentsOrchestrator } from "./agents/orchestrator.ts";
+import {
+	getLanguageFromFilename,
+	isPathSafe,
+	scanFileTree,
+} from "./api/agents.ts";
 import { UPLOADS_DIR, WORKSPACES_DIR } from "./constants.ts";
 import index from "./web/index.html";
 import {
@@ -36,8 +41,10 @@ const server = Bun.serve({
 
 	routes: {
 		"/": index,
+		"/agents": index,
+		"/agents/*": index,
 
-		"/upload": {
+		"/api/upload": {
 			POST: async (req) => {
 				const formData = await req.formData();
 				const results: FileAttachment[] = [];
@@ -53,7 +60,7 @@ const server = Bun.serve({
 						id,
 						filename: value.name,
 						mediaType: value.type,
-						url: `/uploads/${filename}`,
+						url: `/api/uploads/${filename}`,
 					});
 				}
 
@@ -61,14 +68,67 @@ const server = Bun.serve({
 			},
 		},
 
-		"/uploads/*": async (req) => {
+		"/api/uploads/*": async (req) => {
 			const url = new URL(req.url);
-			const fileName = url.pathname.slice("/uploads/".length);
+			const fileName = url.pathname.slice("/api/uploads/".length);
 			const file = Bun.file(`${UPLOADS_DIR}/${fileName}`);
 			if (await file.exists()) {
 				return new Response(file);
 			}
 			return new Response("Not Found", { status: 404 });
+		},
+
+		"/api/agents": {
+			GET: () => {
+				return Response.json({
+					agents: orchestrator.getAgentDescriptions(),
+				});
+			},
+		},
+
+		"/api/agents/:name/files": {
+			GET: (req) => {
+				const agentName = req.params.name;
+				const workspace = `${WORKSPACES_DIR}/${agentName}`;
+				try {
+					const tree = scanFileTree(workspace, workspace);
+					return Response.json({ tree });
+				} catch {
+					return Response.json({ error: "Agent not found" }, { status: 404 });
+				}
+			},
+		},
+
+		"/api/agents/:name/file": {
+			GET: (req) => {
+				const agentName = req.params.name;
+				const url = new URL(req.url);
+				const filePath = url.searchParams.get("path");
+				if (!filePath) {
+					return Response.json(
+						{ error: "Missing path parameter" },
+						{ status: 400 },
+					);
+				}
+
+				const workspace = `${WORKSPACES_DIR}/${agentName}`;
+				if (!isPathSafe(workspace, filePath)) {
+					return Response.json({ error: "Invalid path" }, { status: 403 });
+				}
+
+				try {
+					const fullPath = resolve(workspace, filePath);
+					const content = readFileSync(fullPath, "utf-8");
+					const filename = filePath.split("/").pop() ?? filePath;
+					return Response.json({
+						content,
+						filename,
+						language: getLanguageFromFilename(filename),
+					});
+				} catch {
+					return Response.json({ error: "File not found" }, { status: 404 });
+				}
+			},
 		},
 
 		"/webhook/agentmail": {

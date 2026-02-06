@@ -201,6 +201,7 @@ export class AgentsOrchestrator {
 	private active = new Set<string>();
 	private conversations = new Map<string, StoredConversation>();
 	private humanRequests = new Map<string, HumanRequestRecord>();
+	private agentDescriptions = new Map<string, string>();
 
 	constructor(config: OrchestratorConfig) {
 		this.config = config;
@@ -285,10 +286,14 @@ export class AgentsOrchestrator {
 	}
 
 	async init(): Promise<void> {
-		const { agentNames } = await createWorkspaces(
+		const { agentNames, agentRegistry } = await createWorkspaces(
 			this.config.registryPath,
 			this.config.workspacesPath,
 		);
+
+		for (const [name, description] of Object.entries(agentRegistry)) {
+			this.agentDescriptions.set(name, description);
+		}
 
 		for (const agentName of agentNames) {
 			const workspace = `${this.config.workspacesPath}/${agentName}`;
@@ -399,6 +404,18 @@ export class AgentsOrchestrator {
 	getAgents(): Array<{ name: string; status: AgentStatus }> {
 		return Array.from(this.workers.keys()).map((name) => ({
 			name,
+			status: this.active.has(name) ? "working" : "idle",
+		}));
+	}
+
+	getAgentDescriptions(): Array<{
+		name: string;
+		description: string;
+		status: AgentStatus;
+	}> {
+		return Array.from(this.workers.keys()).map((name) => ({
+			name,
+			description: this.agentDescriptions.get(name) ?? "",
 			status: this.active.has(name) ? "working" : "idle",
 		}));
 	}
