@@ -1,22 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import type { FileContent, FileTreeNode } from "../../server/lib/files.ts";
+
+export type { FileTreeNode };
 
 export type AgentInfo = {
 	name: string;
 	description: string;
 	status: "idle" | "working";
-};
-
-export type FileTreeNode = {
-	name: string;
-	path: string;
-	type: "file" | "directory";
-	children?: FileTreeNode[];
-};
-
-export type FileContent = {
-	content: string;
-	filename: string;
-	language: string;
 };
 
 async function fetchJson<T>(url: string): Promise<T> {

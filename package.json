@@ -4,8 +4,8 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"start": "bun src/server.ts",
-		"dev": "bun --hot src/server.ts",
+		"start": "bun src/server/index.ts",
+		"dev": "bun --hot src/server/index.ts",
 		"fix": "biome check --write",
 		"typecheck": "tsc --noEmit",
 		"tunnel": "cloudflared tunnel --config cloudflared.yml run"

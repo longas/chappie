@@ -1,16 +1,18 @@
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { extname, resolve } from "node:path";
 import type { AgentMail } from "agentmail";
 import { Webhook } from "svix";
+import index from "../web/index.html";
 import type { FileAttachment } from "./agents/orchestrator.ts";
 import { AgentsOrchestrator } from "./agents/orchestrator.ts";
+import { UPLOADS_DIR, WORKSPACES_DIR } from "./constants.ts";
 import {
 	getLanguageFromFilename,
+	isAgentNameSafe,
+	isBinaryFile,
 	isPathSafe,
 	scanFileTree,
-} from "./api/agents.ts";
-import { UPLOADS_DIR, WORKSPACES_DIR } from "./constants.ts";
-import index from "./web/index.html";
+} from "./lib/files.ts";
 import {
 	WS_AGENTS,
 	WS_CHANNEL,
@@ -87,11 +89,17 @@ const server = Bun.serve({
 		},
 
 		"/api/agents/:name/files": {
-			GET: (req) => {
+			GET: async (req) => {
 				const agentName = req.params.name;
+				if (!isAgentNameSafe(agentName)) {
+					return Response.json(
+						{ error: "Invalid agent name" },
+						{ status: 400 },
+					);
+				}
 				const workspace = `${WORKSPACES_DIR}/${agentName}`;
 				try {
-					const tree = scanFileTree(workspace, workspace);
+					const tree = await scanFileTree(workspace, workspace);
 					return Response.json({ tree });
 				} catch {
 					return Response.json({ error: "Agent not found" }, { status: 404 });
@@ -100,8 +108,14 @@ const server = Bun.serve({
 		},
 
 		"/api/agents/:name/file": {
-			GET: (req) => {
+			GET: async (req) => {
 				const agentName = req.params.name;
+				if (!isAgentNameSafe(agentName)) {
+					return Response.json(
+						{ error: "Invalid agent name" },
+						{ status: 400 },
+					);
+				}
 				const url = new URL(req.url);
 				const filePath = url.searchParams.get("path");
 				if (!filePath) {
@@ -118,7 +132,17 @@ const server = Bun.serve({
 
 				try {
 					const fullPath = resolve(workspace, filePath);
-					const content = readFileSync(fullPath, "utf-8");
+					const file = Bun.file(fullPath);
+					const buffer = Buffer.from(await file.arrayBuffer());
+
+					if (isBinaryFile(buffer)) {
+						return Response.json(
+							{ error: "Binary file cannot be displayed" },
+							{ status: 422 },
+						);
+					}
+
+					const content = buffer.toString("utf-8");
 					const filename = filePath.split("/").pop() ?? filePath;
 					return Response.json({
 						content,
@@ -220,7 +244,7 @@ const server = Bun.serve({
 });
 
 const orchestrator = new AgentsOrchestrator({
-	registryPath: `${import.meta.dir}/../agents-registry`,
+	registryPath: `${import.meta.dir}/../../agents-registry`,
 	workspacesPath: WORKSPACES_DIR,
 	entryAgent: "ceo",
 	onAgentResponse: (agent, turnId, text) => {

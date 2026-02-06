@@ -13,7 +13,7 @@ import {
 	WS_TOOL_RESULT,
 	WS_TOOL_USE,
 	WS_TURN_START,
-} from "../ws-events.ts";
+} from "../server/ws-events.ts";
 
 const ENTRY_AGENT = "ceo";
 const isEntryAgent = (agent: string) => agent === ENTRY_AGENT;

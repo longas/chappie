@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import type { BundledLanguage } from "shiki";
 import {
@@ -66,16 +66,18 @@ export function AgentDetailPage() {
 	const [selectedPath, setSelectedPath] = useState<string>();
 	const handleSelect = useCallback((path: string) => setSelectedPath(path), []);
 
-	const { data: tree = [] } = useAgentFiles(name);
+	const { data: tree = [], error: treeError } = useAgentFiles(name);
 
-	const isDirectory =
-		!!selectedPath && findNode(tree, selectedPath)?.type === "directory";
-
-	const { data: file, isPending: fileLoading } = useAgentFile(
-		name,
-		selectedPath,
-		isDirectory,
+	const isDirectory = useMemo(
+		() => !!selectedPath && findNode(tree, selectedPath)?.type === "directory",
+		[tree, selectedPath],
 	);
+
+	const {
+		data: file,
+		isFetching: fileLoading,
+		error: fileError,
+	} = useAgentFile(name, selectedPath, isDirectory);
 
 	return (
 		<div className="flex h-full flex-col">
@@ -99,16 +101,20 @@ export function AgentDetailPage() {
 			{/* Two-panel layout */}
 			<ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0">
 				{/* File tree */}
-				<ResizablePanel defaultSize="25%" minSize="15%" maxSize="50%">
+				<ResizablePanel defaultSize="250px" minSize="250px" maxSize="400px">
 					<ScrollArea className="h-full">
 						<div className="p-3">
-							{tree.length > 0 ? (
+							{treeError ? (
+								<p className="text-sm text-destructive p-2">
+									Failed to load files
+								</p>
+							) : tree.length > 0 ? (
 								<FileTree
-									{...({ onSelect: handleSelect } as Record<string, unknown>)}
+									onSelect={handleSelect}
 									selectedPath={selectedPath}
 									className="border-0"
 								>
-									{<TreeNodes nodes={tree} />}
+									<TreeNodes nodes={tree} />
 								</FileTree>
 							) : (
 								<p className="text-sm text-muted-foreground p-2">
@@ -122,16 +128,21 @@ export function AgentDetailPage() {
 				<ResizableHandle withHandle />
 
 				{/* File content */}
-				<ResizablePanel defaultSize="75%">
+				<ResizablePanel>
 					{fileLoading ? (
 						<div className="flex items-center justify-center h-full text-muted-foreground text-sm">
 							Loading...
 						</div>
+					) : fileError ? (
+						<div className="flex items-center justify-center h-full text-destructive text-sm">
+							{fileError.message.includes("422")
+								? "Binary file cannot be displayed"
+								: "Failed to load file"}
+						</div>
 					) : file ? (
 						<CodeBlock
 							code={file.content}
-							language="markdown"
-							// language={file.language as BundledLanguage}
+							language={file.language as BundledLanguage}
 							showLineNumbers
 							className="h-full rounded-none border-0 flex flex-col [&>.relative]:flex-1 [&>.relative]:min-h-0"
 						>
