@@ -137,7 +137,7 @@ function HumanRequestsPanel({
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
-			<SheetContent side="right" className="w-[400px] sm:max-w-[400px]">
+			<SheetContent side="right" className="w-100 sm:max-w-100">
 				<SheetHeader>
 					<SheetTitle>Human Requests</SheetTitle>
 					<SheetDescription>
