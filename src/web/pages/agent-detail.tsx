@@ -22,6 +22,11 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+	ResizableHandle,
+	ResizablePanel,
+	ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	type FileTreeNode,
@@ -92,28 +97,32 @@ export function AgentDetailPage() {
 			</div>
 
 			{/* Two-panel layout */}
-			<div className="flex flex-1 min-h-0">
+			<ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0">
 				{/* File tree */}
-				<ScrollArea className="w-72 border-r">
-					<div className="p-3">
-						{tree.length > 0 ? (
-							<FileTree
-								{...({ onSelect: handleSelect } as Record<string, unknown>)}
-								selectedPath={selectedPath}
-								className="border-0"
-							>
-								{<TreeNodes nodes={tree} />}
-							</FileTree>
-						) : (
-							<p className="text-sm text-muted-foreground p-2">
-								No files found
-							</p>
-						)}
-					</div>
-				</ScrollArea>
+				<ResizablePanel defaultSize="25%" minSize="15%" maxSize="50%">
+					<ScrollArea className="h-full">
+						<div className="p-3">
+							{tree.length > 0 ? (
+								<FileTree
+									{...({ onSelect: handleSelect } as Record<string, unknown>)}
+									selectedPath={selectedPath}
+									className="border-0"
+								>
+									{<TreeNodes nodes={tree} />}
+								</FileTree>
+							) : (
+								<p className="text-sm text-muted-foreground p-2">
+									No files found
+								</p>
+							)}
+						</div>
+					</ScrollArea>
+				</ResizablePanel>
+
+				<ResizableHandle withHandle />
 
 				{/* File content */}
-				<div className="flex-1 min-w-0">
+				<ResizablePanel defaultSize="75%">
 					{fileLoading ? (
 						<div className="flex items-center justify-center h-full text-muted-foreground text-sm">
 							Loading...
@@ -140,8 +149,8 @@ export function AgentDetailPage() {
 							Select a file to view its contents
 						</div>
 					)}
-				</div>
-			</div>
+				</ResizablePanel>
+			</ResizablePanelGroup>
 		</div>
 	);
 }
