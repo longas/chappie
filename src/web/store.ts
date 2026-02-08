@@ -311,6 +311,7 @@ function createWebSocket(
 
 		// Response - append text part and finalize message
 		if (data.type === WS_RESPONSE) {
+
 			const humanConvoId = getConversationId("user", ENTRY_AGENT);
 
 			set((state) => {

@@ -107,6 +107,21 @@ const server = Bun.serve({
 			},
 		},
 
+		"/api/agents/:name/open": {
+			POST: async (req) => {
+				const agentName = req.params.name;
+				if (!isAgentNameSafe(agentName)) {
+					return Response.json(
+						{ error: "Invalid agent name" },
+						{ status: 400 },
+					);
+				}
+				const workspace = `${WORKSPACES_DIR}/${agentName}`;
+				Bun.spawn(["open", workspace]);
+				return Response.json({ ok: true });
+			},
+		},
+
 		"/api/agents/:name/file": {
 			GET: async (req) => {
 				const agentName = req.params.name;

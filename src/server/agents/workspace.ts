@@ -3,7 +3,6 @@ import {
 	existsSync,
 	mkdirSync,
 	readdirSync,
-	rmSync,
 	writeFileSync,
 } from "node:fs";
 
@@ -34,8 +33,8 @@ export async function createWorkspaces(
 
 	const agentNames = Object.keys(agentRegistry);
 
-	// Create fresh workspaces
-	rmSync(workspacesPath, { recursive: true, force: true });
+	// Create or update workspaces (preserves existing files)
+	mkdirSync(workspacesPath, { recursive: true });
 
 	for (const agentName of agentNames) {
 		const agentRegistryPath = `${registryPath}/${agentName}`;

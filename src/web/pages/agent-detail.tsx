@@ -1,3 +1,4 @@
+import { FolderOpenIcon, RefreshCwIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import type { BundledLanguage } from "shiki";
@@ -22,6 +23,7 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
 import {
 	ResizableHandle,
 	ResizablePanel,
@@ -29,10 +31,16 @@ import {
 } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
 	type FileTreeNode,
 	useAgentFile,
 	useAgentFiles,
 } from "@/hooks/use-agents";
+import { cn } from "@/lib/utils";
 
 function TreeNodes({ nodes }: { nodes: FileTreeNode[] }) {
 	return nodes.map((node) => {
@@ -66,7 +74,12 @@ export function AgentDetailPage() {
 	const [selectedPath, setSelectedPath] = useState<string>();
 	const handleSelect = useCallback((path: string) => setSelectedPath(path), []);
 
-	const { data: tree = [], error: treeError } = useAgentFiles(name);
+	const {
+		data: tree = [],
+		error: treeError,
+		refetch: refetchTree,
+		isFetching: treeLoading,
+	} = useAgentFiles(name);
 
 	const isDirectory = useMemo(
 		() => !!selectedPath && findNode(tree, selectedPath)?.type === "directory",
@@ -101,8 +114,45 @@ export function AgentDetailPage() {
 			{/* Two-panel layout */}
 			<ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0">
 				{/* File tree */}
-				<ResizablePanel defaultSize="250px" minSize="250px" maxSize="400px">
-					<ScrollArea className="h-full">
+				<ResizablePanel defaultSize="250px" minSize="250px" maxSize="500px">
+					<div className="flex items-center justify-between border-b px-3 py-1.5">
+						<span className="text-xs font-medium text-muted-foreground">
+							Files
+						</span>
+						<div className="flex items-center gap-0.5">
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="size-6"
+										onClick={() => refetchTree()}
+									>
+										<RefreshCwIcon
+											className={cn("size-3.5", treeLoading && "animate-spin")}
+										/>
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>Refresh</TooltipContent>
+							</Tooltip>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="size-6"
+										onClick={() =>
+											fetch(`/api/agents/${name}/open`, { method: "POST" })
+										}
+									>
+										<FolderOpenIcon className="size-3.5" />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>Open in Finder</TooltipContent>
+							</Tooltip>
+						</div>
+					</div>
+					<ScrollArea className="h-[calc(100%-37px)]">
 						<div className="p-3">
 							{treeError ? (
 								<p className="text-sm text-destructive p-2">
