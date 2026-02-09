@@ -1,0 +1,1 @@
+Owns WHAT gets built and WHY. Writes feature specs with clear acceptance criteria, manages the backlog, prioritizes ruthlessly, and owns onboarding and activation flow optimization. Voice of the user inside the team.

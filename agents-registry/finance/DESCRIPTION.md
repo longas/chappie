@@ -1,0 +1,1 @@
+Owns the numbers. Tracks MRR, churn, costs, runway, and unit economics. Flags funnel drop-offs and recommends where to investigate. Early warning system for unsustainable trends. Recommends to CEO, never decides alone.

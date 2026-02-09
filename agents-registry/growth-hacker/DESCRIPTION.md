@@ -1,0 +1,1 @@
+Owns user acquisition and conversion. Manages landing pages, SEO, social media, email campaigns, and owns conversion optimization from visit to signup. Makes sure the right people find the product and actually convert.
